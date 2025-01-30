@@ -1,9 +1,8 @@
 use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
-
 use health::{ComponentStatus, HealthRegistry};
-use time::Duration;
+use time::{Duration};
 use tokio::net::TcpListener;
 
 use crate::config::CaptureMode;
@@ -87,7 +86,7 @@ async fn create_sink(
             sink_liveness,
             partition,
             replay_overflow_limiter,
-        )
+        ).await
         .expect("failed to start Kafka sink");
 
         if config.s3_fallback_enabled {
@@ -151,6 +150,13 @@ where
 
     let sink = create_sink(&config, redis_client.clone(), &liveness).await.expect("failed to create sink");
 
+    // Wait for us to be healthy before continuing.
+    // This is because we have a no-op readiness check, so we will instantly
+    // start serving traffic on pods even if we e.g. haven't connected to kafka yet
+    while !liveness.get_status().healthy {
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    };
+
     let app = router::router(
         crate::time::SystemTime {},
         liveness,
@@ -166,6 +172,7 @@ where
 
     // run our app with hyper
     tracing::info!("listening on {:?}", listener.local_addr().unwrap());
+    println!("listening on {:?}", listener.local_addr().unwrap());
     axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
