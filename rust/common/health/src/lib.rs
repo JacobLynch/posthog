@@ -244,7 +244,7 @@ impl HealthRegistry {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ComponentStatus, HealthRegistry, HealthStatus};
+    use crate::{ComponentStatus, HealthRegistry, HealthStatus, HealthStrategy};
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
     use std::ops::{Add, Sub};
