@@ -124,8 +124,8 @@ impl std::str::FromStr for HealthStrategy {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.trim().to_lowercase().as_ref() {
-            "ALL" => Ok(HealthStrategy::All),
-            "ANY" => Ok(HealthStrategy::Any),
+            "all" => Ok(HealthStrategy::All),
+            "any" => Ok(HealthStrategy::Any),
             _ => Err(format!("Unknown Health Strategy: {s}, must be ALL or ANY")),
         }
     }
@@ -386,5 +386,41 @@ mod tests {
         }
         .into_response();
         assert_eq!(ok.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn any_strategy() {
+        let registry = HealthRegistry::new_with_strategy("liveness", HealthStrategy::Any);
+        let handle1 = registry
+            .register("one".to_string(), Duration::seconds(30))
+            .await;
+        let handle2 = registry
+            .register("two".to_string(), Duration::seconds(30))
+            .await;
+        assert_or_retry(|| registry.get_status().components.len() == 2).await;
+
+        // Initially unhealthy with Any strategy
+        assert!(!registry.get_status().healthy);
+
+        // First component going healthy is enough in Any strategy
+        handle1.report_healthy().await;
+        assert_or_retry(|| registry.get_status().healthy).await;
+
+        // Still healthy even if second component is unhealthy
+        handle2.report_status(ComponentStatus::Unhealthy).await;
+        assert_or_retry(|| registry.get_status().healthy).await;
+
+        // Becomes unhealthy only when all components are unhealthy
+        handle1.report_status(ComponentStatus::Unhealthy).await;
+        assert_or_retry(|| !registry.get_status().healthy).await;
+    }
+
+    #[tokio::test]
+    async fn health_strategy_from_str() {
+        assert_eq!("ALL".parse::<HealthStrategy>().unwrap(), HealthStrategy::All);
+        assert_eq!("ANY".parse::<HealthStrategy>().unwrap(), HealthStrategy::Any);
+        assert_eq!("all".parse::<HealthStrategy>().unwrap(), HealthStrategy::All);
+        assert_eq!("any".parse::<HealthStrategy>().unwrap(), HealthStrategy::Any);
+        assert!("invalid".parse::<HealthStrategy>().is_err());
     }
 }
