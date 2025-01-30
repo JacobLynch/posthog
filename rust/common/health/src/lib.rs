@@ -198,9 +198,9 @@ impl HealthRegistry {
             .expect("poisoned HeathRegistry mutex");
 
         let result = HealthStatus {
-             // unhealthy if no component has registered yet or if we're using the "Any" strategy
-             // "All" defaults to true and is set to false if any healthcheck fails
-             // "Any" defaults to false and is set to true if any healthcheck passes
+            // unhealthy if no component has registered yet or if we're using the "Any" strategy
+            // "All" defaults to true and is set to false if any healthcheck fails
+            // "Any" defaults to false and is set to true if any healthcheck passes
             healthy: !components.is_empty() && self.strategy == HealthStrategy::All,
             components: Default::default(),
         };
@@ -417,10 +417,22 @@ mod tests {
 
     #[tokio::test]
     async fn health_strategy_from_str() {
-        assert_eq!("ALL".parse::<HealthStrategy>().unwrap(), HealthStrategy::All);
-        assert_eq!("ANY".parse::<HealthStrategy>().unwrap(), HealthStrategy::Any);
-        assert_eq!("all".parse::<HealthStrategy>().unwrap(), HealthStrategy::All);
-        assert_eq!("any".parse::<HealthStrategy>().unwrap(), HealthStrategy::Any);
+        assert_eq!(
+            "ALL".parse::<HealthStrategy>().unwrap(),
+            HealthStrategy::All
+        );
+        assert_eq!(
+            "ANY".parse::<HealthStrategy>().unwrap(),
+            HealthStrategy::Any
+        );
+        assert_eq!(
+            "all".parse::<HealthStrategy>().unwrap(),
+            HealthStrategy::All
+        );
+        assert_eq!(
+            "any".parse::<HealthStrategy>().unwrap(),
+            HealthStrategy::Any
+        );
         assert!("invalid".parse::<HealthStrategy>().is_err());
     }
 }
