@@ -1,8 +1,8 @@
+use health::{ComponentStatus, HealthRegistry};
 use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use health::{ComponentStatus, HealthRegistry};
-use time::{Duration};
+use time::Duration;
 use tokio::net::TcpListener;
 
 use crate::config::CaptureMode;
@@ -86,7 +86,8 @@ async fn create_sink(
             sink_liveness,
             partition,
             replay_overflow_limiter,
-        ).await
+        )
+        .await
         .expect("failed to start Kafka sink");
 
         if config.s3_fallback_enabled {
@@ -118,8 +119,9 @@ where
 {
     let liveness = HealthRegistry::new("liveness");
 
-    let redis_client =
-        Arc::new(RedisClient::new(config.redis_url.clone()).expect("failed to create redis client"));
+    let redis_client = Arc::new(
+        RedisClient::new(config.redis_url.clone()).expect("failed to create redis client"),
+    );
 
     let billing_limiter = RedisLimiter::new(
         Duration::seconds(5),
@@ -134,7 +136,8 @@ where
     .expect("failed to create billing limiter");
 
     let token_dropper = config
-        .dropped_keys.clone()
+        .dropped_keys
+        .clone()
         .map(|k| TokenDropper::new(&k))
         .unwrap_or_default();
 
@@ -148,14 +151,16 @@ where
         CaptureMode::Recordings => config.kafka.kafka_producer_message_max_bytes as usize,
     };
 
-    let sink = create_sink(&config, redis_client.clone(), &liveness).await.expect("failed to create sink");
+    let sink = create_sink(&config, redis_client.clone(), &liveness)
+        .await
+        .expect("failed to create sink");
 
     // Wait for us to be healthy before continuing.
     // This is because we have a no-op readiness check, so we will instantly
     // start serving traffic on pods even if we e.g. haven't connected to kafka yet
     while !liveness.get_status().healthy {
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-    };
+    }
 
     let app = router::router(
         crate::time::SystemTime {},

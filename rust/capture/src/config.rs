@@ -69,7 +69,7 @@ pub struct Config {
     pub s3_fallback_endpoint: Option<String>,
 
     #[envconfig(default = "ALL")]
-    pub healthcheck_strategy: HealthStrategy
+    pub healthcheck_strategy: HealthStrategy,
 }
 
 impl Config {
