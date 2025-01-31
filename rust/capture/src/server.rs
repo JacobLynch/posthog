@@ -155,13 +155,6 @@ where
         .await
         .expect("failed to create sink");
 
-    // Wait for us to be healthy before continuing.
-    // This is because we have a no-op readiness check, so we will instantly
-    // start serving traffic on pods even if we e.g. haven't connected to kafka yet
-    while !liveness.get_status().healthy {
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-    }
-
     let app = router::router(
         crate::time::SystemTime {},
         liveness,
